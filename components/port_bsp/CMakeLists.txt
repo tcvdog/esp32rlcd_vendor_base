@@ -1,0 +1,22 @@
+idf_component_register(
+    SRCS 
+    "i2c_bsp.cpp" 
+    "display_bsp.cpp" 
+    "./src/multi_button/multi_button.c" 
+    "button_bsp.c"
+    "./codec_bsp.cpp"
+    "joystick_bsp.c"
+    PRIV_REQUIRES 
+    driver
+    esp_timer
+    codec_board 
+    REQUIRES
+    esp_driver_sdmmc
+    fatfs
+    esp_adc
+    esp_lcd
+    INCLUDE_DIRS 
+    "./" 
+    "./src/multi_button"
+    "../ExternLib/codec_board/include"
+    EMBED_FILES "./pcm/canon.pcm")

@@ -1,0 +1,25 @@
+dependencies:
+  esp_codec_dev:
+    dependencies: []
+    source:
+      path: /home/tcvdog/桌面/esp32rlcd/vendor/02_ESP-IDF/07_Audio_Test/components/esp_codec_dev
+      type: local
+    version: 1.3.5
+  idf:
+    source:
+      type: idf
+    version: 5.5.3
+  lvgl/lvgl:
+    component_hash: d7c1ac037ae6e85d94897f807d6e7ba0946a83e720074fc95a4f6241da9f9f53
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 8.4.0
+direct_dependencies:
+- espressif/esp_codec_dev
+- idf
+- lvgl/lvgl
+manifest_hash: 8edb10e3583fe88dade6dd15f4eb5355d5d5461f3c3af5d277317561e3fc87e9
+target: esp32s3
+version: 2.0.0
