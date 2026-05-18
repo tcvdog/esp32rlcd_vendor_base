@@ -11,7 +11,7 @@ endif()
 
 idf_component_register(SRCS  "cfg_parse.c" "codec_board.c" "codec_init.c" "dummy_codec.c"
                              "lcd_init.c" "drv/tca9554.c"
+                             "board_cfg_data.c"
                        INCLUDE_DIRS ./include
                        PRIV_INCLUDE_DIRS drv
-                       REQUIRES "${COMPONENT_PRIV_REQUIRE}"
-                       EMBED_TXTFILES "board_cfg.txt")
+                       REQUIRES "${COMPONENT_PRIV_REQUIRE}")

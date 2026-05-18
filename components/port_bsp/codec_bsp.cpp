@@ -5,9 +5,6 @@
 #include "codec_bsp.h"
 #include "i2c_bsp.h"
 
-extern const uint8_t music_pcm_start[] asm("_binary_canon_pcm_start");
-extern const uint8_t music_pcm_end[]   asm("_binary_canon_pcm_end");
-
 CodecPort::CodecPort(I2cMasterBus& i2cbus,const char *strName) :
 i2cbus_(i2cbus) 
 {
@@ -88,9 +85,10 @@ void CodecPort::CodecPort_SetInfo(const char *strName,int open_en,int sample_rat
 	}
 }
 
+// 嵌入式 canon.pcm 已被移除 (从未被调用, 改用 SD卡音频)
 uint8_t *CodecPort::CodecPort_GetPcmData(uint32_t *len) {
-	*len = (music_pcm_end - music_pcm_start);
-	return (uint8_t *)music_pcm_start;
+	*len = 0;
+	return NULL;
 }
 
 // end of file

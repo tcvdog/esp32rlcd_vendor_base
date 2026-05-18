@@ -79,13 +79,14 @@ JoystickAction_t Joystick_GetAction(void)
     }
     s_last_sw = sw;
 
-    /* Direction — 只在中位变化时触发一次, 防连跳 */
+    /* Direction — 硬件 X轴(GP1)=上下, Y轴(GP2)=左右, 已交换 */
+    /* 方向反转: X左右对调(dx符号反), Y上下对调(dy符号反) */
     if (abs(dx) > DEADZONE || abs(dy) > DEADZONE) {
         int dir;
-        if (abs(dy) > abs(dx)) {
-            dir = (dy < 0) ? 1 : -1;   // 1=UP, -1=DOWN
+        if (abs(dx) > abs(dy)) {
+            dir = (dx > 0) ? 1 : -1;   // 1=UP, -1=DOWN (GP1=上下, 反向后)
         } else {
-            dir = (dx < 0) ? 2 : -2;   // 2=LEFT, -2=RIGHT
+            dir = (dy > 0) ? 2 : -2;   // 2=LEFT, -2=RIGHT (GP2=左右, 反向后)
         }
         if (dir != s_last_dir) {
             s_last_dir = dir;
@@ -99,4 +100,24 @@ JoystickAction_t Joystick_GetAction(void)
     }
 
     return JOY_ACTION_NONE;
+}
+
+/* 九宫格位置: 摇杆方向映射到0-8
+ * 0=左上(1), 1=上(2), 2=右上(3)
+ * 3=左(4),   4=中(5), 5=右(6)
+ * 6=左下(7), 7=下(8), 8=右下(9)
+ * -1=中位(未超出死区)
+ */
+int Joystick_GetNumpadPos(void)
+{
+    int x = adc1_get_raw(JOY_X_CH);
+    int y = adc1_get_raw(JOY_Y_CH);
+    int dx = x - CENTER_X;
+    int dy = y - CENTER_Y;
+
+    if (abs(dx) < DEADZONE && abs(dy) < DEADZONE) return -1;
+
+    int col = (dx < -DEADZONE/2) ? 0 : (dx > DEADZONE/2) ? 2 : 1;
+    int row = (dy < -DEADZONE/2) ? 0 : (dy > DEADZONE/2) ? 2 : 1;
+    return row * 3 + col;
 }

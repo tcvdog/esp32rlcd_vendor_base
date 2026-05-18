@@ -3,101 +3,92 @@
 #include <esp_log.h>
 #include <esp_timer.h>
 #include "button_bsp.h"
-#include "multi_button.h"
 
-EventGroupHandle_t BootButtonGroups;
-EventGroupHandle_t GP18ButtonGroups;
+static const char *TAG = "Buttons";
 
-static Button BootButton;   // Application button
-#define BOOT_KEY_PIN 0      // Actual GPIO
-#define BOOT_ID 1           // Button ID
-#define BOOT_Active 0       // Valid level
+/* 按钮引脚定义 */
+#define BTN_SW1_PIN  GPIO_NUM_17
+#define BTN_SW2_PIN  GPIO_NUM_18
+#define BTN_SW3_PIN  GPIO_NUM_19
+#define BTN_SW4_PIN  GPIO_NUM_20
 
-static Button GP18Button; 
-#define GP18_KEY_PIN 18    
-#define GP18_ID 2         
-#define GP18_Active 0       
+/* 消抖时间 */
+#define DEBOUNCE_MS  50
 
-/*******************Callback event declaration***************/
-static void on_boot_single_click(Button *btn_handle) {
-    xEventGroupSetBits(BootButtonGroups, set_bit_button(0));
+static bool s_sw1_last = true, s_sw2_last = true, s_sw3_last = true, s_sw4_last = true;
+static bool s_sw1_press = false, s_sw2_press = false, s_sw3_press = false, s_sw4_press = false;
+static int64_t s_sw1_time = 0, s_sw2_time = 0, s_sw3_time = 0, s_sw4_time = 0;
+
+static bool read_pin(gpio_num_t pin) {
+    return gpio_get_level(pin) != 0;
 }
 
-static void on_boot_double_click(Button *btn_handle) {
-    xEventGroupSetBits(BootButtonGroups, set_bit_button(1));
-}
+static void debounce(gpio_num_t pin, bool *last, bool *press, int64_t *time) {
+    bool cur = read_pin(pin);
+    int64_t now = esp_timer_get_time() / 1000;
 
-static void on_boot_long_press_start(Button *btn_handle) {
-    xEventGroupSetBits(BootButtonGroups, set_bit_button(2));
-}
-
-static void on_gp18_single_click(Button *btn_handle) {
-    xEventGroupSetBits(GP18ButtonGroups, set_bit_button(0));
-}
-
-static void on_gp18_double_click(Button *btn_handle) {
-    xEventGroupSetBits(GP18ButtonGroups, set_bit_button(1));
-}
-
-static void on_gp18_long_press_start(Button *btn_handle) {
-    xEventGroupSetBits(GP18ButtonGroups, set_bit_button(2));
-}
-
-/*********************************************/
-
-static void clock_task_callback(void *arg) {
-    button_ticks();
-}
-
-static uint8_t read_button_GPIO(uint8_t Button_ID) {
-    switch (Button_ID) {
-    case BOOT_ID:
-        return gpio_get_level(BOOT_KEY_PIN);
-    case GP18_ID:
-        return gpio_get_level(GP18_KEY_PIN);
-    default:
-        break;
+    if (cur != *last) {
+        // 边沿变化, 记录时间
+        *last = cur;
+        *time = now;
+    } else if (!cur) {
+        // 持续为低(按下), 且消抖时间到
+        if (!*press && (now - *time > DEBOUNCE_MS)) {
+            *press = true;
+        }
+    } else {
+        // 松开(高电平), 清除按下标志, 允许下一次触发
+        *press = false;
     }
-    return 1;
 }
 
-static void gpio_init(void) {
-    gpio_config_t gpio_conf = {};
-    gpio_conf.intr_type     = GPIO_INTR_DISABLE;
-    gpio_conf.mode          = GPIO_MODE_INPUT;
-    gpio_conf.pin_bit_mask  = (0x1ULL << BOOT_KEY_PIN) | (0x1ULL << GP18_KEY_PIN);
-    gpio_conf.pull_down_en  = GPIO_PULLDOWN_DISABLE;
-    gpio_conf.pull_up_en    = GPIO_PULLUP_ENABLE;
+void Custom_ButtonInit(void)
+{
+    ESP_LOGI(TAG, "Init buttons: SW1=GP17, SW2=GP18, SW3=GP19, SW4=GP20");
 
-    ESP_ERROR_CHECK_WITHOUT_ABORT(gpio_config(&gpio_conf));
+    gpio_config_t cfg = {};
+    cfg.intr_type = GPIO_INTR_DISABLE;
+    cfg.mode = GPIO_MODE_INPUT;
+    cfg.pin_bit_mask = (1ULL << BTN_SW1_PIN) | (1ULL << BTN_SW2_PIN) |
+                       (1ULL << BTN_SW3_PIN) | (1ULL << BTN_SW4_PIN);
+    cfg.pull_up_en = GPIO_PULLUP_ENABLE;
+    cfg.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    gpio_config(&cfg);
+
+    /* 读取初始状态 */
+    s_sw1_last = read_pin(BTN_SW1_PIN);
+    s_sw2_last = read_pin(BTN_SW2_PIN);
+    s_sw3_last = read_pin(BTN_SW3_PIN);
+    s_sw4_last = read_pin(BTN_SW4_PIN);
 }
 
-void Custom_ButtonInit(void) {
-    BootButtonGroups = xEventGroupCreate();
-    GP18ButtonGroups = xEventGroupCreate();
-    gpio_init();
+ButtonState_t Buttons_GetState(void)
+{
+    debounce(BTN_SW1_PIN, &s_sw1_last, &s_sw1_press, &s_sw1_time);
+    debounce(BTN_SW2_PIN, &s_sw2_last, &s_sw2_press, &s_sw2_time);
+    debounce(BTN_SW3_PIN, &s_sw3_last, &s_sw3_press, &s_sw3_time);
+    debounce(BTN_SW4_PIN, &s_sw4_last, &s_sw4_press, &s_sw4_time);
 
-    button_init(&BootButton, read_button_GPIO, BOOT_Active, BOOT_ID);           // Initialization: Initialize object, callback function, trigger level, key ID
-    button_attach(&BootButton, BTN_SINGLE_CLICK, on_boot_single_click);         // Single click event
-    button_attach(&BootButton, BTN_DOUBLE_CLICK, on_boot_double_click);         // Double click event
-    button_attach(&BootButton, BTN_LONG_PRESS_START, on_boot_long_press_start); // Long press event
-
-    button_init(&GP18Button, read_button_GPIO, BOOT_Active, GP18_ID);           
-    button_attach(&GP18Button, BTN_SINGLE_CLICK, on_gp18_single_click);         
-    button_attach(&GP18Button, BTN_DOUBLE_CLICK, on_gp18_double_click);         
-    button_attach(&GP18Button, BTN_LONG_PRESS_START, on_gp18_long_press_start);
-
-    esp_timer_create_args_t clock_tick_timer_args = {};
-    clock_tick_timer_args.callback                = &clock_task_callback;
-    clock_tick_timer_args.name                    = "clock_task";
-    clock_tick_timer_args.arg                     = NULL;
-    esp_timer_handle_t clock_tick_timer           = NULL;
-    ESP_ERROR_CHECK(esp_timer_create(&clock_tick_timer_args, &clock_tick_timer));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(clock_tick_timer, 1000 * 5)); // 5ms
-    button_start(&BootButton);
-    button_start(&GP18Button);
+    ButtonState_t st = {
+        .sw1 = s_sw1_press,
+        .sw2 = s_sw2_press,
+        .sw3 = s_sw3_press,
+        .sw4 = s_sw4_press,
+    };
+    return st;
 }
 
-uint8_t user_boot_get_repeat_count(void) {
-    return (button_get_repeat_count(&BootButton));
+bool Button_WasPressed(int pin)
+{
+    bool *press = NULL;
+    switch (pin) {
+        case 17: press = &s_sw1_press; break;
+        case 18: press = &s_sw2_press; break;
+        case 19: press = &s_sw3_press; break;
+        case 20: press = &s_sw4_press; break;
+        default: return false;
+    }
+    bool ret = *press;
+    *press = false;  // 消费掉
+    return ret;
 }

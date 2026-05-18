@@ -20,6 +20,7 @@ typedef enum {
 
 void Joystick_Init(void);
 JoystickAction_t Joystick_GetAction(void);
+int Joystick_GetNumpadPos(void);  // 返回 0-8 对应九宫格 1-9, -1=中位
 
 #ifdef __cplusplus
 }

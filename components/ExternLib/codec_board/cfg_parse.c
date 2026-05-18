@@ -17,8 +17,11 @@ typedef struct {
 
 static board_section_t *codec_section;
 
-extern const char board_cfg_start[] asm("_binary_board_cfg_txt_start");
-extern const char board_cfg_end[] asm("_binary_board_cfg_txt_end");
+extern const char board_cfg_txt_data[];
+extern const size_t board_cfg_txt_size;
+
+#define board_cfg_start board_cfg_txt_data
+#define board_cfg_end   (board_cfg_txt_data + board_cfg_txt_size)
 
 static bool is_word(char s)
 {

@@ -7,22 +7,17 @@
 extern "C" {
 #endif
 
-extern EventGroupHandle_t BootButtonGroups;
-extern EventGroupHandle_t GP18ButtonGroups;
-
-
-#define set_bit_button(x) ((uint32_t)(0x01)<<(x))
-#define get_bit_button(x,y) (((uint32_t)(x)>>(y)) & 0x01)
-#define set_bit_all 0x00ffffff        
-
-
-//set bit
-#define set_bit_data(x,y) (x |= (0x01<<y))
-#define clr_bit_data(x,y) (x &= ~(0x01<<y))
-#define get_bit_data(x,y) ((x>>y) & 0x01)
-#define rset_bit_data(x) ((uint32_t)0x01<<(x))
+/* 4个独立按键的状态 */
+typedef struct {
+    bool sw1;  // GP17
+    bool sw2;  // GP18
+    bool sw3;  // GP19
+    bool sw4;  // GP20
+} ButtonState_t;
 
 void Custom_ButtonInit(void);
+ButtonState_t Buttons_GetState(void);
+bool Button_WasPressed(int pin);  // 返回指定引脚是否被按下过(单次触发)
 
 #ifdef __cplusplus
 }

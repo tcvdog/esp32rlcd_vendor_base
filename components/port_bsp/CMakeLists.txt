@@ -18,5 +18,4 @@ idf_component_register(
     INCLUDE_DIRS 
     "./" 
     "./src/multi_button"
-    "../ExternLib/codec_board/include"
-    EMBED_FILES "./pcm/canon.pcm")
+    "../ExternLib/codec_board/include")
